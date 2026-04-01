@@ -3,6 +3,9 @@ import redis
 import json 
 app = Flask(__name__)
 db=redis.Redis(host='redis', port=6379, decode_responses=True)
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 @app.route('/tasks', methods=['GET'])
 def get_tasks():

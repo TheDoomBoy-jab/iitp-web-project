@@ -4,5 +4,11 @@ services:
     build: .
     ports:
       - "5001:5000"
+    depends_on:
+      - redis
   redis:
     image: "redis:alpine"
+    volumes:
+      - redis_data:/data  # This is the "Magic" line for persistence
+volumes:
+  redis_data:

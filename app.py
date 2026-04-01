@@ -1,26 +1,20 @@
-import time
-import redis
-from flask import Flask
-
+from flask import Flask, request, jsonify 
+import redis 
+import json 
 app = Flask(__name__)
-# This connects to the 'redis' container by its service name!
-cache = redis.Redis(host='redis', port=6379)
+db=redis.Redis(host='redis', port=6379, decode_responses=True)
 
-def get_hit_count():
-    retries = 5
-    while True:
-        try:
-            return cache.incr('hits')
-        except redis.exceptions.ConnectionError as exc:
-            if retries == 0:
-                raise exc
-            retries -= 1
-            time.sleep(0.5)
-
-@app.route('/')
-def hello():
-    count = get_hit_count()
-    return f'Hello IIT Patna! This page has been viewed {count} times.\n'
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", debug=True)
+@app.route('/tasks', methods=['GET'])
+def get_tasks():
+	tasks = db.lrange("my_tasks", 0, -1)
+	return jsonify({"tasks": tasks})
+@app.route('/tasks', methods=['POST'])
+def add_task():
+	data=request.json
+	task=data.get("task")
+	if task:
+		db.rpush("my_tasks", task)
+		return jsonify({"message": "Task Added!"}), 201
+	return jsonify({"error": "No Task Provided"}), 400
+if __name__=="__main__":
+	app.run(host="0.0.0.0", port=5000)

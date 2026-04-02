@@ -104,23 +104,30 @@
             const data = await response.json();
             const list = document.getElementById('task-list');
             list.innerHTML = ''; 
-            
-            data.tasks.forEach(taskObj => {
-                // Safety: handle old plain strings or new objects
-                const text = taskObj.task || taskObj;
-                const timeStr = taskObj.id ? formatDate(taskObj.id) : "Original Task";
-
-                list.innerHTML += `
-                    <li class="task-item">
-                        <div class="task-info">
-                            <span class="task-text">${text}</span>
-                            <span class="task-time">📅 ${timeStr}</span>
-                        </div>
-                        <button class="delete-btn" onclick="deleteTask('${text}')">Delete</button>
-                    </li>`;
-            });
-        } catch (e) { console.error("Fetch failed", e); }
     }
+    data.tasks.forEach(taskObj => {
+    const isDone = taskObj.completed ? 'completed' : '';
+    const isChecked = taskObj.completed ? 'checked' : '';
+
+    list.innerHTML += `
+        <li class="task-item">
+            <div class="task-info">
+                <input type="checkbox" class="checkbox" ${isChecked} onclick="toggleTask(${taskObj.id})">
+                <span class="task-text ${isDone}">${taskObj.task}</span>
+                <span class="task-time">📅 ${formatDate(taskObj.id)}</span>
+            </div>
+            <button class="delete-btn" onclick="deleteTask('${taskObj.task}')">Delete</button>
+        </li>`;
+});
+
+async function toggleTask(id) {
+    await fetch('/tasks/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id })
+    });
+    fetchTasks();
+}
 
     async function addTask() {
         const input = document.getElementById('taskInput');

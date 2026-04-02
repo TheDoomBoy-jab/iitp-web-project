@@ -65,7 +65,22 @@ def tasks_api():
             
             return jsonify({"message": "Task deleted!"}), 200
         return jsonify({"error": "No task specified"}), 400
-
+@app.route('/tasks/toggle', methods=['POST'])
+def toggle_task():
+    data = request.get_json()
+    task_id = data.get("id")
+    
+    all_raw = db.lrange("my_tasks", 0, -1)
+    for i, raw in enumerate(all_raw):
+        parsed = json.loads(raw)
+        if parsed.get("id") == task_id:
+            # Toggle the 'completed' status
+            parsed["completed"] = not parsed.get("completed", False)
+            # Update the specific item in Redis
+            db.lset("my_tasks", i, json.dumps(parsed))
+            return jsonify({"message": "Toggled!", "status": parsed["completed"]})
+            
+    return jsonify({"error": "Task not found"}), 404
 if __name__ == "__main__":
     # 0.0.0.0 is required for Docker to expose the app to your Mac
     app.run(host="0.0.0.0", port=5000, debug=True)

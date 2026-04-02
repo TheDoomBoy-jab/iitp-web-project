@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IITP Task-Master</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            text-align: center; 
+            background: #eef2f3; 
+            margin-top: 50px;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: inline-block;
+            min-width: 350px;
+        }
+        h1 { color: #2c3e50; }
+        input { 
+            padding: 10px; 
+            width: 70%; 
+            border: 1px solid #ddd; 
+            border-radius: 4px;
+            outline: none;
+        }
+        .add-btn { 
+            padding: 10px 15px; 
+            background: #3498db; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer;
+        }
+        .add-btn:hover { background: #2980b9; }
+        #task-list { list-style: none; padding: 0; margin-top: 20px; }
+        .task-item { 
+            background: #f9f9f9; 
+            margin: 8px 0; 
+            padding: 12px; 
+            border-radius: 6px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            border-left: 5px solid #3498db;
+        }
+        .delete-btn { 
+            color: #e74c3c; 
+            font-weight: bold; 
+            cursor: pointer; 
+            border: none; 
+            background: none;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>IITP Task-Master</h1>
+    <div style="margin-bottom: 20px;">
+        <input type="text" id="taskInput" placeholder="What needs to be done?">
+        <button class="add-btn" onclick="addTask()">Add</button>
+    </div>
+    <ul id="task-list"></ul>
+</div>
+
+<script>
+    // 1. Function to Fetch and Display Tasks
+    async function fetchTasks() {
+        const response = await fetch('/tasks');
+        const data = await response.json();
+        const list = document.getElementById('task-list');
+        list.innerHTML = ''; // Clear current list
+        
+        data.tasks.forEach(task => {
+            list.innerHTML += `
+                <li class="task-item">
+                    <span>${task.task}</span>
+                    <button class="delete-btn" onclick="deleteTask('${task}')">×</button>
+                </li>`;
+        });
+    }
+
+    // 2. Function to Add a Task (POST)
+    async function addTask() {
+        const input = document.getElementById('taskInput');
+        const task = input.value;
+        if (!task) return;
+
+        await fetch('/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ task: task })
+        });
+
+        input.value = ''; // Clear input
+        fetchTasks();     // Refresh list
+    }
+
+    // 3. Function to Delete a Task (DELETE)
+    async function deleteTask(taskName) {
+        await fetch('/tasks', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ task: taskName })
+        });
+        fetchTasks(); // Refresh list
+    }
+
+    // Initial load
+    fetchTasks();
+</script>
+
+</body>
+</html>

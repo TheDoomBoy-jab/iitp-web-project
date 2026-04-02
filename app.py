@@ -5,66 +5,55 @@ import time
 
 app = Flask(__name__)
 
-# Connect to the Redis container using the service name 'redis'
-# decode_responses=True ensures we get strings, not bytes
+# Connect to Redis (decode_responses=True gives us strings instead of bytes)
 db = redis.Redis(host='redis', port=6379, decode_responses=True)
 
 @app.route('/')
 def index():
-    # Serves the HTML file from the /templates folder
     return render_template('index.html')
 
 @app.route('/tasks', methods=['GET', 'POST', 'DELETE'])
 def tasks_api():
-    # --- GET: Fetch and Parse Tasks ---
+    # GET: Fetch all tasks and handle old data safety
     if request.method == 'GET':
         raw_tasks = db.lrange("my_tasks", 0, -1)
         tasks = []
         for t in raw_tasks:
             try:
-                # Attempt to parse the string as a JSON object
                 tasks.append(json.loads(t))
             except (json.JSONDecodeError, TypeError):
-                # If it's an old plain string (like "Study"), 
-                # convert it to a valid JSON-like dict so it doesn't crash
-                tasks.append({"id": 0, "task": t})
+                # Safety for old plain-string data
+                tasks.append({"id": int(time.time()), "task": t, "completed": False})
         return jsonify({"tasks": tasks})
 
-    # --- POST: Create a New Task with a Unique ID ---
+    # POST: Create a new task object
     if request.method == 'POST':
         data = request.get_json()
         task_text = data.get("task")
         if task_text:
-            # We store tasks as JSON strings to allow for IDs and metadata
             new_task = {
                 "id": int(time.time()), 
-                "task": task_text
+                "task": task_text,
+                "completed": False
             }
             db.rpush("my_tasks", json.dumps(new_task))
             return jsonify({"message": "Task added!"}), 201
-        return jsonify({"error": "No task text provided"}), 400
+        return jsonify({"error": "No task"}), 400
 
-    # --- DELETE: Remove a Specific Task ---
+    # DELETE: Find and remove the task by its text
     if request.method == 'DELETE':
         data = request.get_json()
         task_to_delete = data.get("task")
-        if task_to_delete:
-            # In a real app, we'd delete by ID, but for now, 
-            # we'll find and remove the exact JSON string match.
-            # We fetch all, find the one with the matching text, and remove it.
-            all_raw = db.lrange("my_tasks", 0, -1)
-            for raw in all_raw:
-                try:
-                    parsed = json.loads(raw)
-                    if parsed.get("task") == task_to_delete:
-                        db.lrem("my_tasks", 1, raw)
-                except:
-                    # Handle old-style plain strings
-                    if raw == task_to_delete:
-                        db.lrem("my_tasks", 1, raw)
-            
-            return jsonify({"message": "Task deleted!"}), 200
-        return jsonify({"error": "No task specified"}), 400
+        all_raw = db.lrange("my_tasks", 0, -1)
+        for raw in all_raw:
+            try:
+                if json.loads(raw).get("task") == task_to_delete:
+                    db.lrem("my_tasks", 1, raw)
+            except:
+                if raw == task_to_delete:
+                    db.lrem("my_tasks", 1, raw)
+        return jsonify({"message": "Deleted"}), 200
+
 @app.route('/tasks/toggle', methods=['POST'])
 def toggle_task():
     data = request.get_json()
@@ -74,13 +63,12 @@ def toggle_task():
     for i, raw in enumerate(all_raw):
         parsed = json.loads(raw)
         if parsed.get("id") == task_id:
-            # Toggle the 'completed' status
+            # Flip the completed status
             parsed["completed"] = not parsed.get("completed", False)
-            # Update the specific item in Redis
             db.lset("my_tasks", i, json.dumps(parsed))
-            return jsonify({"message": "Toggled!", "status": parsed["completed"]})
+            return jsonify({"status": "success", "completed": parsed["completed"]})
             
     return jsonify({"error": "Task not found"}), 404
+
 if __name__ == "__main__":
-    # 0.0.0.0 is required for Docker to expose the app to your Mac
     app.run(host="0.0.0.0", port=5000, debug=True)

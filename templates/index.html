@@ -3,62 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IITP Task-Master Pro</title>
+    <title>IITP Grind-Master</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; margin-top: 50px; text-align: center; }
-        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: inline-block; min-width: 450px; }
-        h1 { color: #1a73e8; }
-        .input-group { display: flex; gap: 10px; justify-content: center; margin-bottom: 30px; }
-        input[type="text"] { padding: 12px; width: 250px; border: 2px solid #ddd; border-radius: 8px; outline: none; }
-        .add-btn { padding: 12px 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        :root { --primary: #1a73e8; --bg: #f8fafc; --text: #1e293b; --danger: #ef4444; }
+        body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin-top: 60px; text-align: center; }
+        .container { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.05); display: inline-block; min-width: 480px; }
         
+        h1 { margin-bottom: 5px; color: var(--primary); font-weight: 800; letter-spacing: -1px; }
+        #counter { color: #64748b; font-size: 0.9rem; margin-bottom: 30px; font-weight: 500; }
+        
+        .input-group { display: flex; gap: 12px; justify-content: center; margin-bottom: 35px; }
+        input[type="text"] { padding: 14px; width: 280px; border: 2px solid #e2e8f0; border-radius: 10px; outline: none; transition: 0.3s; font-size: 1rem; }
+        input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.1); }
+        .add-btn { padding: 14px 24px; background: var(--primary); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; transition: 0.2s; }
+        .add-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(26, 115, 232, 0.3); }
+
         #task-list { list-style: none; padding: 0; }
-        .task-item { background: #fff; margin: 10px 0; padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee; }
+        .task-item { background: #fff; margin-bottom: 12px; padding: 18px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #f1f5f9; transition: 0.3s; }
+        .task-item:hover { border-color: #cbd5e1; transform: scale(1.01); }
         
-        .task-info { display: flex; align-items: center; text-align: left; gap: 15px; }
-        .task-text { font-weight: 600; font-size: 1.1rem; color: #333; }
-        .completed { text-decoration: line-through; color: #bbb !important; }
+        .task-info { display: flex; align-items: center; gap: 18px; }
+        .task-text { font-weight: 600; font-size: 1.05rem; color: #334155; }
+        .completed { text-decoration: line-through; color: #94a3b8 !important; opacity: 0.7; }
         
-        .task-time { font-size: 0.7rem; color: #999; display: block; margin-top: 3px; }
-        .checkbox { transform: scale(1.3); cursor: pointer; }
-        .delete-btn { background: #fee2e2; color: #ef4444; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .task-time { font-size: 0.75rem; color: #94a3b8; display: block; margin-top: 4px; }
+        .checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary); }
+        .delete-btn { background: #fee2e2; color: var(--danger); border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 700; opacity: 0; transition: 0.2s; }
+        .task-item:hover .delete-btn { opacity: 1; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>IITP Task-Master Pro</h1>
+    <h1>Grind-Master</h1>
+    <div id="counter">0 Tasks Remaining</div>
+    
     <div class="input-group">
         <input type="text" id="taskInput" placeholder="Add a new grind task...">
-        <button class="add-btn" onclick="addTask()">Add</button>
+        <button class="add-btn" onclick="addTask()">Add Task</button>
     </div>
+    
     <ul id="task-list"></ul>
 </div>
 
 <script>
     window.onload = fetchTasks;
 
+    // Trigger Add Task on Enter Key
+    document.getElementById('taskInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addTask();
+    });
+
     async function fetchTasks() {
         const response = await fetch('/tasks');
         const data = await response.json();
         const list = document.getElementById('task-list');
+        const counter = document.getElementById('counter');
+        
         list.innerHTML = ''; 
+
+        // 1. Calculate remaining tasks
+        const remaining = data.tasks.filter(t => !t.completed).length;
+        counter.innerText = `${remaining} Tasks Remaining to Grind`;
+
+        // 2. Sort: Active at top, Completed at bottom
+        data.tasks.sort((a, b) => a.completed - b.completed);
         
         data.tasks.forEach(taskObj => {
             const isDoneClass = taskObj.completed ? 'completed' : '';
             const isChecked = taskObj.completed ? 'checked' : '';
-            const dateStr = new Date(taskObj.id * 1000).toLocaleString('en-IN', { hour:'2-digit', minute:'2-digit', day:'numeric', month:'short' });
+            const dateStr = new Date(taskObj.id * 1000).toLocaleString('en-IN', { 
+                hour:'2-digit', minute:'2-digit', day:'numeric', month:'short' 
+            });
 
             list.innerHTML += `
                 <li class="task-item">
                     <div class="task-info">
                         <input type="checkbox" class="checkbox" ${isChecked} onclick="toggleTask(${taskObj.id})">
-                        <div>
+                        <div style="text-align: left;">
                             <span class="task-text ${isDoneClass}">${taskObj.task}</span>
-                            <span class="task-time">📅 ${dateStr}</span>
+                            <span class="task-time">🕒 ${dateStr}</span>
                         </div>
                     </div>
-                    <button class="delete-btn" onclick="deleteTask('${taskObj.task}')">Delete</button>
+                    <button class="delete-btn" onclick="deleteTask('${taskObj.task}')">Remove</button>
                 </li>`;
         });
     }
@@ -66,11 +93,13 @@
     async function addTask() {
         const input = document.getElementById('taskInput');
         if (!input.value.trim()) return;
+        
         await fetch('/tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ task: input.value })
         });
+        
         input.value = '';
         fetchTasks();
     }
@@ -92,10 +121,7 @@
         });
         fetchTasks();
     }
-document.getElementById('taskinput').addEventListener('keypress', function  (e) {if(e.key==='Enter'){
-addTask();
-}
-});
 </script>
+
 </body>
 </html>

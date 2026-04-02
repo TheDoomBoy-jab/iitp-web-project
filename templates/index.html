@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -100,7 +100,10 @@
             console.error("Error fetching tasks:", error);
         }
     }
-
+function formatTime(timestamp) {
+    const date = new Date(timestamp * 1000); // Multiply by 1000 to get milliseconds
+    return date.toLocaleString(); // Returns a readable string
+}
     async function addTask() {
         const input = document.getElementById('taskInput');
         const taskText = input.value.trim();

@@ -3,82 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IITP Task-Master</title>
+    <title>IITP Task-Master Pro</title>
     <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            text-align: center; 
-            background: #f0f2f5; 
-            margin-top: 50px;
-        }
-        .container {
-            background: white;
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            display: inline-block;
-            min-width: 450px;
-        }
-        h1 { color: #1a73e8; margin-bottom: 25px; }
-        .input-group { margin-bottom: 25px; display: flex; gap: 10px; justify-content: center; }
-        input { 
-            padding: 12px; 
-            width: 250px; 
-            border: 2px solid #e0e0e0; 
-            border-radius: 8px;
-            outline: none;
-        }
-        .add-btn { 
-            padding: 12px 20px; 
-            background: #1a73e8; 
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
-            cursor: pointer;
-            font-weight: bold;
-        }
-        #task-list { list-style: none; padding: 0; margin-top: 20px; }
-        .task-item { 
-            background: #ffffff; 
-            margin: 12px 0; 
-            padding: 15px; 
-            border-radius: 10px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-            border: 1px solid #eee;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-        .task-info { text-align: left; }
-        .task-text { font-weight: 600; color: #333; display: block; }
-        .task-time { font-size: 0.75rem; color: #888; margin-top: 4px; display: block; }
-        .delete-btn { 
-            background: #fee2e2;
-            color: #ef4444; 
-            border: none; 
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-.completed {
-    text-decoration: line-through;
-    color: #bbb !important;
-}
-.checkbox {
-    margin-right: 15px;
-    transform: scale(1.2);
-    cursor: pointer;
-}
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; margin-top: 50px; text-align: center; }
+        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: inline-block; min-width: 450px; }
+        h1 { color: #1a73e8; }
+        .input-group { display: flex; gap: 10px; justify-content: center; margin-bottom: 30px; }
+        input[type="text"] { padding: 12px; width: 250px; border: 2px solid #ddd; border-radius: 8px; outline: none; }
+        .add-btn { padding: 12px 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        
+        #task-list { list-style: none; padding: 0; }
+        .task-item { background: #fff; margin: 10px 0; padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee; }
+        
+        .task-info { display: flex; align-items: center; text-align: left; gap: 15px; }
+        .task-text { font-weight: 600; font-size: 1.1rem; color: #333; }
+        .completed { text-decoration: line-through; color: #bbb !important; }
+        
+        .task-time { font-size: 0.7rem; color: #999; display: block; margin-top: 3px; }
+        .checkbox { transform: scale(1.3); cursor: pointer; }
+        .delete-btn { background: #fee2e2; color: #ef4444; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>IITP Task-Master</h1>
+    <h1>IITP Task-Master Pro</h1>
     <div class="input-group">
-        <input type="text" id="taskInput" placeholder="What needs to be done?">
-        <button class="add-btn" onclick="addTask()">Add Task</button>
+        <input type="text" id="taskInput" placeholder="Add a new grind task...">
+        <button class="add-btn" onclick="addTask()">Add</button>
     </div>
     <ul id="task-list"></ul>
 </div>
@@ -86,61 +38,49 @@
 <script>
     window.onload = fetchTasks;
 
-    // Helper to format the Unix timestamp from Python
-    function formatDate(timestamp) {
-        if (!timestamp) return "";
-        const date = new Date(timestamp * 1000);
-        return date.toLocaleString('en-IN', { 
-            day: 'numeric', 
-            month: 'short', 
-            hour: '2-digit', 
-            minute: '2-digit' 
+    async function fetchTasks() {
+        const response = await fetch('/tasks');
+        const data = await response.json();
+        const list = document.getElementById('task-list');
+        list.innerHTML = ''; 
+        
+        data.tasks.forEach(taskObj => {
+            const isDoneClass = taskObj.completed ? 'completed' : '';
+            const isChecked = taskObj.completed ? 'checked' : '';
+            const dateStr = new Date(taskObj.id * 1000).toLocaleString('en-IN', { hour:'2-digit', minute:'2-digit', day:'numeric', month:'short' });
+
+            list.innerHTML += `
+                <li class="task-item">
+                    <div class="task-info">
+                        <input type="checkbox" class="checkbox" ${isChecked} onclick="toggleTask(${taskObj.id})">
+                        <div>
+                            <span class="task-text ${isDoneClass}">${taskObj.task}</span>
+                            <span class="task-time">📅 ${dateStr}</span>
+                        </div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteTask('${taskObj.task}')">Delete</button>
+                </li>`;
         });
     }
-
-    async function fetchTasks() {
-        try {
-            const response = await fetch('/tasks');
-            const data = await response.json();
-            const list = document.getElementById('task-list');
-            list.innerHTML = ''; 
-    }
-    data.tasks.forEach(taskObj => {
-    const isDone = taskObj.completed ? 'completed' : '';
-    const isChecked = taskObj.completed ? 'checked' : '';
-
-    list.innerHTML += `
-        <li class="task-item">
-            <div class="task-info">
-                <input type="checkbox" class="checkbox" ${isChecked} onclick="toggleTask(${taskObj.id})">
-                <span class="task-text ${isDone}">${taskObj.task}</span>
-                <span class="task-time">📅 ${formatDate(taskObj.id)}</span>
-            </div>
-            <button class="delete-btn" onclick="deleteTask('${taskObj.task}')">Delete</button>
-        </li>`;
-});
-
-async function toggleTask(id) {
-    await fetch('/tasks/toggle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: id })
-    });
-    fetchTasks();
-}
 
     async function addTask() {
         const input = document.getElementById('taskInput');
-        const text = input.value.trim();
-        if (!text) return;
-
+        if (!input.value.trim()) return;
         await fetch('/tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ task: text })
+            body: JSON.stringify({ task: input.value })
         });
+        input.value = '';
+        fetchTasks();
+    }
 
-        input.value = ''; 
+    async function toggleTask(id) {
+        await fetch('/tasks/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id })
+        });
         fetchTasks();
     }
 
@@ -153,6 +93,5 @@ async function toggleTask(id) {
         fetchTasks();
     }
 </script>
-
 </body>
 </html>

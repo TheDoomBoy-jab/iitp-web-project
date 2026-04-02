@@ -1,4 +1,4 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -17,7 +17,7 @@
             border-radius: 15px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             display: inline-block;
-            min-width: 400px;
+            min-width: 450px;
         }
         h1 { color: #1a73e8; margin-bottom: 25px; }
         .input-group { margin-bottom: 25px; display: flex; gap: 10px; justify-content: center; }
@@ -27,9 +27,7 @@
             border: 2px solid #e0e0e0; 
             border-radius: 8px;
             outline: none;
-            transition: border-color 0.3s;
         }
-        input:focus { border-color: #1a73e8; }
         .add-btn { 
             padding: 12px 20px; 
             background: #1a73e8; 
@@ -39,11 +37,10 @@
             cursor: pointer;
             font-weight: bold;
         }
-        .add-btn:hover { background: #1557b0; }
         #task-list { list-style: none; padding: 0; margin-top: 20px; }
         .task-item { 
             background: #ffffff; 
-            margin: 10px 0; 
+            margin: 12px 0; 
             padding: 15px; 
             border-radius: 10px; 
             display: flex; 
@@ -52,17 +49,18 @@
             border: 1px solid #eee;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
+        .task-info { text-align: left; }
+        .task-text { font-weight: 600; color: #333; display: block; }
+        .task-time { font-size: 0.75rem; color: #888; margin-top: 4px; display: block; }
         .delete-btn { 
             background: #fee2e2;
             color: #ef4444; 
             border: none; 
-            padding: 5px 12px;
+            padding: 6px 12px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
-            transition: 0.2s;
         }
-        .delete-btn:hover { background: #fecaca; }
     </style>
 </head>
 <body>
@@ -70,15 +68,26 @@
 <div class="container">
     <h1>IITP Task-Master</h1>
     <div class="input-group">
-        <input type="text" id="taskInput" placeholder="What's on your mind?">
+        <input type="text" id="taskInput" placeholder="What needs to be done?">
         <button class="add-btn" onclick="addTask()">Add Task</button>
     </div>
     <ul id="task-list"></ul>
 </div>
 
 <script>
-    // 1. Load tasks as soon as the page opens
     window.onload = fetchTasks;
+
+    // Helper to format the Unix timestamp from Python
+    function formatDate(timestamp) {
+        if (!timestamp) return "";
+        const date = new Date(timestamp * 1000);
+        return date.toLocaleString('en-IN', { 
+            day: 'numeric', 
+            month: 'short', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+    }
 
     async function fetchTasks() {
         try {
@@ -88,46 +97,44 @@
             list.innerHTML = ''; 
             
             data.tasks.forEach(taskObj => {
-                // IMPORTANT: We use taskObj.task because the backend 
-                // now sends a JSON object: {"id": 123, "task": "text"}
+                // Safety: handle old plain strings or new objects
+                const text = taskObj.task || taskObj;
+                const timeStr = taskObj.id ? formatDate(taskObj.id) : "Original Task";
+
                 list.innerHTML += `
                     <li class="task-item">
-                        <span>${taskObj.task}</span>
-                        <button class="delete-btn" onclick="deleteTask('${taskObj.task}')">Delete</button>
+                        <div class="task-info">
+                            <span class="task-text">${text}</span>
+                            <span class="task-time">📅 ${timeStr}</span>
+                        </div>
+                        <button class="delete-btn" onclick="deleteTask('${text}')">Delete</button>
                     </li>`;
             });
-        } catch (error) {
-            console.error("Error fetching tasks:", error);
-        }
+        } catch (e) { console.error("Fetch failed", e); }
     }
-function formatTime(timestamp) {
-    const date = new Date(timestamp * 1000); // Multiply by 1000 to get milliseconds
-    return date.toLocaleString(); // Returns a readable string
-}
+
     async function addTask() {
         const input = document.getElementById('taskInput');
-        const taskText = input.value.trim();
-        if (!taskText) return;
+        const text = input.value.trim();
+        if (!text) return;
 
         await fetch('/tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ task: taskText })
+            body: JSON.stringify({ task: text })
         });
 
         input.value = ''; 
-        fetchTasks(); // Refresh UI
+        fetchTasks();
     }
 
     async function deleteTask(taskName) {
-        // We send the task name back so Python can find and remove it
         await fetch('/tasks', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ task: taskName })
         });
-        
-        fetchTasks(); // Refresh UI
+        fetchTasks();
     }
 </script>
 

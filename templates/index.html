@@ -92,6 +92,10 @@
         });
         fetchTasks();
     }
+document.getElementById('taskinput').addEventListener('keypress', function  (e) {if(e.key==='Enter'){
+addTask();
+}
+});
 </script>
 </body>
 </html>
